@@ -5,7 +5,8 @@ const UPDATE_URL = 'https://quirkly.life/app-update.json';
 
 interface UpdateConfig {
   latest_app_version: string;
-  latest_apk_url: string;
+  latest_apk_url?: string;
+  url?: string;
 }
 
 // Simple semver compare (e.g. 1.0.1 > 1.0.0)
@@ -37,7 +38,9 @@ export const checkForUpdates = async () => {
     
     const config: UpdateConfig = await response.json();
     
-    if (config.latest_app_version && config.latest_apk_url) {
+    const downloadUrl = config.url || config.latest_apk_url;
+    
+    if (config.latest_app_version && downloadUrl) {
       if (isNewerVersion(config.latest_app_version, currentVersion)) {
         Alert.alert(
           "Update Available!",
@@ -47,7 +50,7 @@ export const checkForUpdates = async () => {
             { 
               text: "Download", 
               onPress: () => {
-                Linking.openURL(config.latest_apk_url).catch((err) => {
+                Linking.openURL(downloadUrl).catch((err) => {
                   console.error("Failed to open update URL:", err);
                   Alert.alert("Error", "Could not open download link.");
                 });
