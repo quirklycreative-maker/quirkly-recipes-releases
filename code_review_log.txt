@@ -1,0 +1,24 @@
+# Diet Khana – Code Review Log
+
+2026-05-28 00:36 – Added RecipeDetailScreen.tsx (placeholder screen with navigation to video player).
+2026-05-28 00:36 – Added DisclaimerModal.tsx (re‑usable modal component).
+2026-05-28 00:35 – Installed firebase@^10.14.1 (required for auth).
+2026-05-28 01:10 – Added console‑output instructions (this entry).
+2026-05-28 01:02 – Added instructions for capturing console output (terminal, Logcat, Console.app).
+2026-05-28 02:15 – Fixed Expo start command by using correct Cwd with spaces; re‑started Metro bundler on LAN.
+2026-05-28 02:45 – Restarted Metro bundler with `npx expo start --host lan` after dependency fix.
+2026-05-28 01:20 – Downgraded Expo SDK to 48, updated dependencies, and reinstalled packages.
+2026-05-28 01:45 – Ran `npx expo install react-native-screens@~3.20.0`; advised user to use LAN IP (e.g., http://192.168.x.x:19000) instead of localhost. Added guidance to check error output.
+2026-05-28 02:00 – Added `start:lan` script to package.json for LAN Expo serving.
+2026-05-28 20:52 – Replaced Quirkly_Emulator AVD with x86_64 Play Store system image and relaunched Expo.
+2026-05-29 10:30 – Attempted to start Expo with tunnel using `npx expo start --tunnel --no-interactive`; awaiting proper URL generation.
+2026-05-29 15:00 – Corrected babel.config.js to use babel-preset-expo, added react-native-gesture-handler import at the top of index.ts to prevent Drawer navigation crashes, and successfully started Metro server with Wi-Fi LAN IP (192.168.1.84).
+2026-05-29 15:25 – Added start-emulator.sh to support launching AVD with low-resource stability configurations and GPU host acceleration.
+2026-05-29 15:40 – Upgraded project to Expo SDK 56 to match the installed Expo Go 56.0.0 client, fixed Firebase Auth resolution by adding cjs to Metro source extensions, and renamed the app to Quirkly.
+2026-05-29 15:50 – Configured Firebase Auth persistence with AsyncStorage in firebaseConfig.ts to resolve the 'Component auth has not been registered yet' crash.
+2026-05-29 16:29 – Added DisclaimerContext.tsx (manages global disclaimer consent and state).
+2026-05-29 16:29 – Added DisclaimerBanner.tsx (renders a persistent, dismissable warning banner).
+2026-05-29 17:21 – Added ExerciseScreen.tsx (renders light stretches, yoga, and walking guides, and includes medical disclaimers and walk reminder settings).
+- Created .env file to store EXPO_PUBLIC_SPOONACULAR_API_KEY securely.
+
+- Created src/services/updateService.ts to handle custom OTA APK updates from quirkly.life

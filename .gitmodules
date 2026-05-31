@@ -1,0 +1,3 @@
+[submodule "src/data/IndianFoodDatasetGeneration"]
+	path = src/data/IndianFoodDatasetGeneration
+	url = https://github.com/kanishk307/IndianFoodDatasetGeneration

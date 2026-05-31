@@ -1,0 +1,12 @@
+appId: host.exp.exponent
+---
+- extendedWaitUntil:
+    visible: "Masala Karela Recipe"
+    timeout: 10000
+- tapOn: "Masala Karela Recipe"
+- extendedWaitUntil:
+    visible:
+      id: "speakerButton"
+    timeout: 10000
+- tapOn:
+    id: "speakerButton"
