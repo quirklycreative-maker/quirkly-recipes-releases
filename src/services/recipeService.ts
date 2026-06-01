@@ -136,16 +136,17 @@ export class RecipeService {
   ): Promise<Recipe[]> {
     let filtered = MOCK_RECIPES;
 
-    // Filter by vegetarian preference
+    // Filter by specific diet preferences
     if (preferences.vegetarian) {
       filtered = filtered.filter(recipe => recipe.tags.includes('veg'));
+    } else if (preferences.allowEgg && !preferences.allowChicken) {
+      // Strict Egg filter
+      filtered = filtered.filter(recipe => recipe.tags.includes('egg'));
+    } else if (preferences.allowChicken && !preferences.allowEgg) {
+      // Strict Chicken filter
+      filtered = filtered.filter(recipe => recipe.tags.includes('chicken'));
     } else {
-      // If not strictly veg, filter based on specific meat/egg preferences
-      filtered = filtered.filter(recipe => {
-        if (recipe.tags.includes('chicken') && !preferences.allowChicken) return false;
-        if (recipe.tags.includes('egg') && !preferences.allowEgg) return false;
-        return true;
-      });
+      // 'all' is selected: allowEgg and allowChicken are both true, no strict filter needed.
     }
 
     // Search Query filter
