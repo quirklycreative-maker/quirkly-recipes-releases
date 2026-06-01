@@ -409,7 +409,13 @@ Return ONLY a valid JSON object (no markdown formatting, no code blocks) with:
   }
 
   // Search YouTube for recipe videos (mock results if no API key)
-  async searchYouTubeRecipes(query: string): Promise<YouTubeRecipeResult[]> {
+  async searchYouTubeRecipes(query: string, tag: 'all' | 'veg' | 'egg' | 'chicken' = 'all'): Promise<YouTubeRecipeResult[]> {
+    let dietKeyword = '';
+    if (tag === 'veg') dietKeyword = 'vegetarian';
+    else if (tag === 'egg') dietKeyword = 'egg';
+    else if (tag === 'chicken') dietKeyword = 'chicken';
+    
+    const fullQuery = dietKeyword ? `${query} ${dietKeyword}` : query;
     let ingredients: string[] = [];
     let giLevel: 'low' | 'medium' | 'high' | 'unknown' = 'unknown';
     let exactGI = -1;
@@ -417,7 +423,7 @@ Return ONLY a valid JSON object (no markdown formatting, no code blocks) with:
     let aiGlycemicLoad = 0;
 
     // 1. Try AI Inference (OpenRouter)
-    const aiResult = await this.inferNutritionWithAI(query);
+    const aiResult = await this.inferNutritionWithAI(fullQuery);
     if (aiResult) {
       ingredients = aiResult.ingredients;
       giLevel = aiResult.giLevel;
@@ -440,7 +446,7 @@ Return ONLY a valid JSON object (no markdown formatting, no code blocks) with:
     if (apiKey) {
       try {
         const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=5&q=${encodeURIComponent(
-          query + ' recipe Hindi'
+          fullQuery + ' recipe Hindi'
         )}&key=${apiKey}`;
         const resp = await fetch(url);
         const data = await resp.json();
@@ -459,7 +465,7 @@ Return ONLY a valid JSON object (no markdown formatting, no code blocks) with:
             carbsGrams: finalCarbsGrams > 0 ? finalCarbsGrams : undefined,
             glycemicLoad: finalGlycemicLoad > 0 ? finalGlycemicLoad : undefined,
             healthTip: aiResult?.healthTip,
-            dishName: query,
+            dishName: fullQuery,
           }));
         }
       } catch (e) {
@@ -468,7 +474,7 @@ Return ONLY a valid JSON object (no markdown formatting, no code blocks) with:
     }
 
     // Mock results — simulate YouTube search results with real food video IDs
-    const safeName = query.trim();
+    const safeName = fullQuery.trim();
     return [
       {
         video: {

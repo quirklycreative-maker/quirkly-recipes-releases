@@ -56,7 +56,7 @@ const RecipeListScreen: React.FC = () => {
 
     setSearchingYouTube(true);
     const timer = setTimeout(async () => {
-      const results = await recipeService.searchYouTubeRecipes(query);
+      const results = await recipeService.searchYouTubeRecipes(query, selectedTag);
       setYoutubeResults(results);
       setSearchingYouTube(false);
     }, 500);
