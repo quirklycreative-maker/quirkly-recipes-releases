@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radii } from '../theme/designTokens';
-import { RecipeService, Recipe, YouTubeRecipeResult } from '../services/recipeService';
+import { RecipeService, Recipe } from '../services/recipeService';
 import { NutritionInfoModal } from '../components/NutritionInfoModal';
 
 const recipeService = new RecipeService();
@@ -25,8 +25,8 @@ const RecipeListScreen: React.FC = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'quirkly' | 'youtube'>('quirkly');
-  const [youtubeResults, setYoutubeResults] = useState<YouTubeRecipeResult[]>([]);
+  const [activeTab, setActiveTab] = useState<'quirkly' | 'youtube'>('youtube');
+  const [youtubeResults, setYoutubeResults] = useState<Recipe[]>([]);
   const [searchingYouTube, setSearchingYouTube] = useState(false);
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -59,6 +59,11 @@ const RecipeListScreen: React.FC = () => {
       const results = await recipeService.searchYouTubeRecipes(query, selectedTag);
       setYoutubeResults(results);
       setSearchingYouTube(false);
+      
+      // Kick off background processing for true exact ingredients & GL
+      recipeService.processTranscriptsInBackground(results, (updatedRecipes) => {
+        setYoutubeResults(updatedRecipes);
+      });
     }, 500);
 
     return () => clearTimeout(timer);
@@ -169,7 +174,8 @@ const RecipeListScreen: React.FC = () => {
     return styles.giHigh;
   };
 
-  const renderYouTubeItem = ({ item }: { item: YouTubeRecipeResult }) => {
+  const renderYouTubeItem = ({ item }: { item: Recipe }) => {
+    if (!item.video) return null;
     return (
       <TouchableOpacity
         style={styles.ytCard}
@@ -190,6 +196,10 @@ const RecipeListScreen: React.FC = () => {
             <Text style={styles.ytTitle} numberOfLines={2}>{item.video.title}</Text>
             
             {/* Show GL if available, otherwise fallback to GI */}
+            <View style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
+              <Text style={{ fontSize: 10, color: colors.textSecondary, marginBottom: 2 }}>
+                {item.glycemicLoad !== undefined ? (item.isExact ? 'Exact GL' : 'Estimated GL') : 'Estimated GI'}
+              </Text>
               {item.glycemicLoad !== undefined ? (
                 <TouchableOpacity 
                   style={styles.giBadgeContainer}
@@ -223,6 +233,7 @@ const RecipeListScreen: React.FC = () => {
                   ]} />
                 </TouchableOpacity>
               )}
+            </View>
           </View>
           <Text style={styles.ytChannel}>{item.video.channel} • {item.video.duration}</Text>
 
@@ -231,7 +242,7 @@ const RecipeListScreen: React.FC = () => {
             <Ionicons name="nutrition-outline" size={14} color={colors.accent} />
             <Text style={styles.ytIngredients} numberOfLines={1}>
               {item.carbsGrams !== undefined ? `Carbs: ${item.carbsGrams}g | ` : ''}
-              {item.inferredIngredients.join(', ')}
+              {item.ingredients.join(', ')}
             </Text>
           </View>
         </View>
@@ -249,6 +260,7 @@ const RecipeListScreen: React.FC = () => {
           <Text style={styles.subtitle}>Diabetes-friendly low-GI Indian meals</Text>
         </View>
 
+        {/*
         <View style={styles.tabContainer}>
           <TouchableOpacity 
             style={[styles.tabButton, activeTab === 'quirkly' && styles.tabButtonActive]}
@@ -263,6 +275,7 @@ const RecipeListScreen: React.FC = () => {
             <Text style={[styles.tabText, activeTab === 'youtube' && styles.tabTextActive]}>YouTube</Text>
           </TouchableOpacity>
         </View>
+        */}
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>

@@ -14,9 +14,12 @@ export interface Recipe {
   giLevel: 'low' | 'medium' | 'high' | 'unknown';
   tags: ('veg' | 'egg' | 'chicken')[];
   videoUrl: string;
+  video?: YoutubeVideo;
   exactGI?: number;
+  carbsGrams?: number;
   glycemicLoad?: number;
   healthTip?: string;
+  isExact?: boolean;
 }
 
 export interface YoutubeVideo {
@@ -409,7 +412,7 @@ Return ONLY a valid JSON object (no markdown formatting, no code blocks) with:
   }
 
   // Search YouTube for recipe videos (mock results if no API key)
-  async searchYouTubeRecipes(query: string, tag: 'all' | 'veg' | 'egg' | 'chicken' = 'all'): Promise<YouTubeRecipeResult[]> {
+  async searchYouTubeRecipes(query: string, tag: 'all' | 'veg' | 'egg' | 'chicken' = 'all'): Promise<Recipe[]> {
     let dietKeyword = '';
     if (tag === 'veg') dietKeyword = 'vegetarian';
     else if (tag === 'egg') dietKeyword = 'egg';
@@ -465,7 +468,12 @@ Return ONLY a valid JSON object (no markdown formatting, no code blocks) with:
             carbsGrams: finalCarbsGrams > 0 ? finalCarbsGrams : undefined,
             glycemicLoad: finalGlycemicLoad > 0 ? finalGlycemicLoad : undefined,
             healthTip: aiResult?.healthTip,
-            dishName: fullQuery,
+            name: fullQuery,
+            ingredients: ingredients,
+            steps: [],
+            tags: tag !== 'all' ? [tag] : [],
+            isExact: false,
+            videoUrl: `https://www.youtube.com/watch?v=${item.id.videoId}`
           }));
         }
       } catch (e) {
@@ -477,36 +485,29 @@ Return ONLY a valid JSON object (no markdown formatting, no code blocks) with:
     const safeName = fullQuery.trim();
     return [
       {
+        id: 'dQw4w9WgXcQ', // Use video ID as recipe ID
+        name: safeName + ' Recipe',
         video: {
-          id: 'M7lc1UVf-VE', // Google's official iframe API test video (guaranteed embeddable)
-          title: `${safeName} Recipe | ${safeName} बनाने की विधि | Easy Home Recipe`,
-          channel: 'Indian Kitchen',
-          duration: '10:30',
-          thumbnail: `https://img.youtube.com/vi/M7lc1UVf-VE/hqdefault.jpg`,
+          id: 'dQw4w9WgXcQ',
+          title: safeName + ' Recipe',
+          channel: 'DietKhana Kitchen',
+          duration: '5:00',
+          thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
         },
-        inferredIngredients: ingredients,
+        ingredients,
+        steps: [],
         giLevel,
-        exactGI,
-        carbsGrams: finalCarbsGrams > 0 ? finalCarbsGrams : undefined,
-        glycemicLoad: finalGlycemicLoad > 0 ? finalGlycemicLoad : undefined,
+        exactGI: exactGI > 0 ? exactGI : undefined,
+        carbsGrams: aiCarbsGrams > 0 ? aiCarbsGrams : undefined,
+        glycemicLoad: aiGlycemicLoad > 0 ? aiGlycemicLoad : undefined,
         healthTip: aiResult?.healthTip,
-        dishName: safeName,
+        tags: tag !== 'all' ? [tag] : [],
+        isExact: false,
+        videoUrl: `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
       },
       {
-        video: {
-          id: 'M7lc1UVf-VE', 
-          title: `Healthy ${safeName} | Indian Recipe for Diabetes`,
-          channel: 'Healthy Indian Cooking',
-          duration: '8:20',
-          thumbnail: `https://img.youtube.com/vi/M7lc1UVf-VE/hqdefault.jpg`,
-        },
-        inferredIngredients: ingredients,
-        giLevel,
-        carbsGrams: finalCarbsGrams > 0 ? finalCarbsGrams : undefined,
-        glycemicLoad: finalGlycemicLoad > 0 ? finalGlycemicLoad : undefined,
-        dishName: safeName,
-      },
-      {
+        id: 'M7lc1UVf-VE',
+        name: `Restaurant Style ${safeName} at Home`,
         video: {
           id: 'M7lc1UVf-VE', 
           title: `Restaurant Style ${safeName} at Home | Chef's Special`,
@@ -514,14 +515,121 @@ Return ONLY a valid JSON object (no markdown formatting, no code blocks) with:
           duration: '12:45',
           thumbnail: `https://img.youtube.com/vi/M7lc1UVf-VE/hqdefault.jpg`,
         },
-        inferredIngredients: ingredients,
+        ingredients,
+        steps: [],
         giLevel,
+        exactGI: exactGI > 0 ? exactGI : undefined,
         carbsGrams: finalCarbsGrams > 0 ? finalCarbsGrams : undefined,
         glycemicLoad: finalGlycemicLoad > 0 ? finalGlycemicLoad : undefined,
-        dishName: safeName,
-      },
+        healthTip: aiResult?.healthTip,
+        tags: tag !== 'all' ? [tag] : [],
+        isExact: false,
+        videoUrl: `https://www.youtube.com/watch?v=M7lc1UVf-VE`
+      }
     ];
   }
+  // Background transcript processing to get exact ingredients and steps
+  async processTranscriptsInBackground(recipes: Recipe[], onUpdate: (updatedRecipes: Recipe[]) => void): Promise<void> {
+    const updatedRecipes = [...recipes];
+    
+    for (let i = 0; i < updatedRecipes.length; i++) {
+      const recipe = updatedRecipes[i];
+      if (!recipe.video || recipe.isExact) continue;
+
+      try {
+        const transcriptData = await YoutubeTranscript.fetchTranscript(recipe.video.id);
+        if (transcriptData && transcriptData.length > 0) {
+          const fullText = transcriptData.map(t => t.text).join(' ');
+          
+          // Use AI to extract precise ingredients and steps
+          const apiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || '';
+          if (apiKey) {
+            const prompt = `Extract the recipe from this video transcript. Return ONLY a valid JSON object matching this structure exactly:
+{
+  "ingredients": ["1 cup flour", "2 eggs"],
+  "steps": ["Mix flour and eggs", "Bake for 10 mins"]
+}
+Do not add markdown blocks.
+Transcript:
+${fullText.substring(0, 15000)}`;
+
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                model: "google/gemini-2.5-flash",
+                messages: [{ role: "user", content: prompt }]
+              })
+            });
+
+            const data = await response.json();
+            if (data.choices && data.choices.length > 0) {
+              const content = data.choices[0].message.content;
+              const jsonStr = content.replace(/```json/g, '').replace(/```/g, '').trim();
+              const parsed = JSON.parse(jsonStr);
+              
+              if (parsed.ingredients && parsed.steps) {
+                updatedRecipes[i] = {
+                  ...recipe,
+                  ingredients: parsed.ingredients,
+                  steps: parsed.steps,
+                  isExact: true
+                };
+                
+                // Fire callback to update UI dynamically
+                onUpdate([...updatedRecipes]);
+                
+                // Background task: Send precise ingredients to Spoonacular
+                this.calculateExactGLWithSpoonacular(updatedRecipes[i], onUpdate, updatedRecipes, i);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log(`Could not process transcript for ${recipe.id}:`, e);
+      }
+    }
+  }
+
+  // Get true carbs from Spoonacular using exact ingredients
+  async calculateExactGLWithSpoonacular(recipe: Recipe, onUpdate: (recipes: Recipe[]) => void, recipesList: Recipe[], index: number) {
+    const spoonacularKey = process.env.EXPO_PUBLIC_SPOONACULAR_API_KEY;
+    if (!spoonacularKey || !recipe.exactGI) return;
+
+    try {
+      const ingredientString = recipe.ingredients.join('\n');
+      const response = await fetch(`https://api.spoonacular.com/recipes/parseIngredients?includeNutrition=true&apiKey=${spoonacularKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `ingredientList=${encodeURIComponent(ingredientString)}&servings=1`
+      });
+
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        let carbs = 0;
+        data.forEach((ing: any) => {
+          const carbNutrient = ing.nutrition?.nutrients?.find((n: any) => n.name === 'Carbohydrates');
+          if (carbNutrient) carbs += carbNutrient.amount;
+        });
+
+        if (carbs > 0) {
+          const exactGL = Math.round((recipe.exactGI * carbs) / 100);
+          recipesList[index] = {
+            ...recipe,
+            carbsGrams: Math.round(carbs),
+            glycemicLoad: exactGL
+          };
+          onUpdate([...recipesList]);
+        }
+      }
+    } catch (e) {
+      console.log('Failed to fetch Spoonacular precise carbs:', e);
+    }
+  }
+
   // Translate Recipe using OpenRouter
   async translateRecipe(recipe: Recipe, targetLang: string = 'Hindi'): Promise<Recipe> {
     const apiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || '';
@@ -633,16 +741,7 @@ Transcript:
 }
 
 // --- YouTube Recipe Result type ---
-export interface YouTubeRecipeResult {
-  video: YoutubeVideo;
-  inferredIngredients: string[];
-  giLevel: 'low' | 'medium' | 'high' | 'unknown';
-  exactGI?: number;
-  carbsGrams?: number;
-  glycemicLoad?: number;
-  healthTip?: string;
-  dishName: string;
-}
+
 
 // --- GI Index Database for Common Indian Cooking Ingredients ---
 // Values are approximate Glycemic Index (0–100 scale)
