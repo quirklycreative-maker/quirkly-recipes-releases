@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Swasth Rasoi Preview</title>
+    <style>
+      :root {
+        --md-bg: #fef7ff;
+        --md-surface: #ffffff;
+        --md-surface-2: #f3edf7;
+        --md-primary: #6750a4;
+        --md-on-primary: #ffffff;
+        --md-secondary: #625b71;
+        --md-outline: #cac4d0;
+        --md-text: #1d1b20;
+        --md-muted: #49454f;
+        --ok: #2e7d32;
+        --warn: #b26a00;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Roboto, "Segoe UI", sans-serif;
+        background: var(--md-bg);
+        color: var(--md-text);
+      }
+      header {
+        position: sticky; top: 0; z-index: 10;
+        background: var(--md-surface);
+        border-bottom: 1px solid var(--md-outline);
+        padding: 14px 16px;
+        display: flex; align-items: center; justify-content: space-between;
+      }
+      .title { font-size: 20px; font-weight: 700; }
+      .badge {
+        border: 1px solid var(--md-outline);
+        background: var(--md-surface-2);
+        padding: 4px 10px; border-radius: 999px; font-size: 12px;
+      }
+      main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 12px; }
+      .hidden { display: none !important; }
+      .card {
+        background: var(--md-surface);
+        border: 1px solid var(--md-outline);
+        border-radius: 12px;
+        padding: 14px;
+        display: grid; gap: 10px;
+      }
+      .row { display: flex; gap: 8px; flex-wrap: wrap; }
+      .grid { display: grid; gap: 12px; }
+      .two { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+      h1,h2,h3,p { margin: 0; }
+      h2 { font-size: 18px; }
+      h3 { font-size: 16px; }
+      .muted { color: var(--md-muted); }
+      input, textarea, button, select {
+        font: inherit;
+        border: 1px solid var(--md-outline);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #fff;
+        color: var(--md-text);
+      }
+      textarea { min-height: 80px; resize: vertical; }
+      button { cursor: pointer; font-weight: 600; }
+      button.primary { background: var(--md-primary); color: var(--md-on-primary); border-color: var(--md-primary); }
+      button.tonal { background: var(--md-surface-2); }
+      .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+      .chip { border-radius: 999px; background: var(--md-surface-2); padding: 6px 10px; font-size: 13px; }
+      .chat {
+        background: #fcfcff;
+        border: 1px solid var(--md-outline);
+        border-radius: 12px;
+        min-height: 220px;
+        max-height: 360px;
+        overflow: auto;
+        padding: 10px;
+        display: grid;
+        gap: 8px;
+      }
+      .msg {
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--md-outline);
+        background: #fff;
+      }
+      .msg.mine { background: #ede7f6; }
+      .msg.ai { background: #e8f5e9; }
+      .meta { font-size: 12px; color: var(--md-muted); margin-bottom: 4px; }
+      .status { font-size: 13px; }
+      .ok { color: var(--ok); }
+      .warn { color: var(--warn); }
+      ol { margin: 0; padding-left: 20px; }
+      .role-btn { width: 100%; text-align: left; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="title">Swasth Rasoi</div>
+      <div id="globalBadge" class="badge">Preview mode</div>
+    </header>
+    <main>
+      <section id="login" class="card grid">
+        <h2>Choose Login</h2>
+        <p class="muted">Prototype PIN: Owner `1234`, Helper `1111`</p>
+        <input id="pin" placeholder="Enter PIN (optional)" />
+        <div class="grid two">
+          <button class="role-btn" data-action="login-owner">Owner login</button>
+          <button class="role-btn" data-action="login-helper">House help login</button>
+        </div>
+      </section>
+
+      <section id="owner" class="hidden grid">
+        <div class="card row">
+          <div>
+            <h2>Owner Dashboard</h2>
+            <p class="muted">Private vitals stay owner-only.</p>
+          </div>
+          <button data-action="logout">Logout</button>
+        </div>
+
+        <div class="card">
+          <h3>Vitals + Health Link</h3>
+          <div class="row">
+            <span id="huaweiBadge" class="badge">Manual</span>
+            <button class="tonal" data-action="toggle-huawei">Link Huawei Health</button>
+          </div>
+          <p class="muted">Helper cannot view HbA1c, weight, or personal vitals.</p>
+        </div>
+
+        <div class="card">
+          <h3>AI Setup (OpenRouter)</h3>
+          <input id="openRouterKey" type="password" placeholder="OpenRouter API key" />
+          <input id="openRouterModel" placeholder="Model, e.g. deepseek/deepseek-chat-v3-0324:free" />
+          <div class="row">
+            <button class="primary" data-action="save-ai">Save</button>
+            <span id="aiConnBadge" class="badge">Offline fallback</span>
+          </div>
+          <p id="aiConnStatus" class="status muted">Configure API key to enable online AI.</p>
+        </div>
+
+        <div class="card">
+          <h3>Grocery Requests from House Help</h3>
+          <div id="requestList" class="grid"></div>
+        </div>
+
+        <div class="card">
+          <h3>Family Chat</h3>
+          <div id="ownerChat" class="chat"></div>
+          <textarea id="ownerText" placeholder="Type message, YouTube link, or voice note text"></textarea>
+          <div class="row">
+            <button class="primary" data-action="send-owner">Send</button>
+            <button data-action="yt-owner">YouTube</button>
+            <button data-action="media-owner" data-kind="image">Image</button>
+            <button data-action="media-owner" data-kind="video">Video</button>
+            <button data-action="media-owner" data-kind="camera">Camera</button>
+            <button data-action="media-owner" data-kind="voice">Voice</button>
+            <button data-action="sum-owner">Summarize</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Owner AI</h3>
+          <textarea id="ownerAiQ" placeholder="Ask AI about meals, GI, planning"></textarea>
+          <button class="primary" data-action="ask-owner-ai">Ask AI</button>
+          <p id="ownerAiA" class="muted"></p>
+        </div>
+      </section>
+
+      <section id="helper" class="hidden grid">
+        <div class="card row">
+          <div>
+            <h2>House Help Dashboard</h2>
+            <p class="muted">Hindi/Nepali chat + grocery + recipes</p>
+          </div>
+          <button data-action="logout">Logout</button>
+        </div>
+
+        <div class="card">
+          <h3>Fridge to Recipes</h3>
+          <textarea id="inventory" placeholder="e.g. lauki, palak, dahi, egg, tomato"></textarea>
+          <button data-action="suggest-recipes">Suggest recipes</button>
+          <div id="recipes" class="grid"></div>
+        </div>
+
+        <div class="card">
+          <h3>Order to Owner</h3>
+          <textarea id="orderText" placeholder="Need to order: lauki, paneer, moong dal"></textarea>
+          <button class="primary" data-action="send-order">Send to owner</button>
+        </div>
+
+        <div class="card">
+          <h3>Family Chat</h3>
+          <div id="helperChat" class="chat"></div>
+          <textarea id="helperText" placeholder="हिंदी/नेपाली में लिखें"></textarea>
+          <div class="row">
+            <button class="primary" data-action="send-helper">Send</button>
+            <button data-action="yt-helper">YouTube</button>
+            <button data-action="media-helper" data-kind="image">Image</button>
+            <button data-action="media-helper" data-kind="video">Video</button>
+            <button data-action="media-helper" data-kind="camera">Camera</button>
+            <button data-action="media-helper" data-kind="voice">Voice</button>
+            <button data-action="sum-helper">Summarize</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Helper AI</h3>
+          <textarea id="helperAiQ" placeholder="Ask recipe/cooking/grocery questions"></textarea>
+          <button class="primary" data-action="ask-helper-ai">Ask AI</button>
+          <p id="helperAiA" class="muted"></p>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const LS = {
+        requests: "swasth-preview-requests",
+        chats: "swasth-preview-chats",
+        huawei: "swasth-preview-huawei",
+        ai: "swasth-preview-ai-config",
+      };
+
+      const state = {
+        role: null,
+        requests: JSON.parse(localStorage.getItem(LS.requests) || "[]"),
+        chats: JSON.parse(localStorage.getItem(LS.chats) || "[]"),
+        huaweiLinked: localStorage.getItem(LS.huawei) === "true",
+        aiConfig: JSON.parse(localStorage.getItem(LS.ai) || '{"apiKey":"","model":"deepseek/deepseek-chat-v3-0324:free"}'),
+      };
+
+      if (!state.chats.length) {
+        state.chats.push({ sender: "ai", type: "text", text: "Family chat ready. Owner vitals stay private." });
+      }
+
+      const RECIPES = [
+        { title: "मूंग दाल चीला", q: "मूंग दाल चीला recipe Hindi", gi: 34, need: ["moong", "दाल", "dahi"], steps: ["दाल भिगोएँ", "बैटर बनाएं", "कम तेल में चीला पकाएं"] },
+        { title: "पालक पनीर/टोफू", q: "पालक पनीर healthy recipe Hindi", gi: 28, need: ["palak", "पालक", "paneer"], steps: ["पालक ब्लांच करें", "हल्का मसाला", "पनीर/टोफू मिलाएं"] },
+        { title: "लौकी चना दाल", q: "लौकी चना दाल recipe Hindi", gi: 38, need: ["lauki", "लौकी", "चना"], steps: ["दाल भिगोएँ", "लौकी के साथ कुकर", "हल्का तड़का"] },
+      ];
+
+      function persist() {
+        localStorage.setItem(LS.requests, JSON.stringify(state.requests));
+        localStorage.setItem(LS.chats, JSON.stringify(state.chats));
+        localStorage.setItem(LS.huawei, String(state.huaweiLinked));
+        localStorage.setItem(LS.ai, JSON.stringify(state.aiConfig));
+      }
+
+      function byId(id) { return document.getElementById(id); }
+
+      function login(role) {
+        const pin = byId("pin").value.trim();
+        if (pin && ((role === "owner" && pin !== "1234") || (role === "helper" && pin !== "1111"))) {
+          alert("Invalid PIN for this preview.");
+          return;
+        }
+        state.role = role;
+        byId("login").classList.add("hidden");
+        byId("owner").classList.toggle("hidden", role !== "owner");
+        byId("helper").classList.toggle("hidden", role !== "helper");
+        byId("globalBadge").textContent = role === "owner" ? "Owner logged in" : "Helper logged in";
+        renderAll();
+      }
+
+      function logout() {
+        state.role = null;
+        byId("login").classList.remove("hidden");
+        byId("owner").classList.add("hidden");
+        byId("helper").classList.add("hidden");
+        byId("globalBadge").textContent = "Preview mode";
+      }
+
+      function parseItems(t) {
+        return (t || "")
+          .replace(/[^\p{L}\p{N},\s.-]/gu, " ")
+          .split(/[,;\n]+/)
+          .map((s) => s.trim())
+          .filter((s) => s.length > 1);
+      }
+
+      function giLabel(score) { return score <= 55 ? "Low" : score <= 69 ? "Medium" : "High"; }
+
+      function estimateGi(text) {
+        const t = (text || "").toLowerCase();
+        let score = 42;
+        if (/(dal|दाल|moong|पालक|palak|lauki|लौकी|paneer|tofu|egg|chicken|dahi|दही)/i.test(t)) score -= 10;
+        if (/(rice|चावल|potato|आलू|sugar|paratha|bread|fried)/i.test(t)) score += 15;
+        score = Math.max(10, Math.min(85, score));
+        return { score, label: giLabel(score) };
+      }
+
+      function gistForYoutube(text) {
+        if (/(moong|चीला|chilla)/i.test(text)) return "Moong chilla focused recipe with lower GI profile.";
+        if (/(palak|paneer|टोफू)/i.test(text)) return "Palak based protein-rich curry, better with small millet roti.";
+        if (/(lauki|चना)/i.test(text)) return "Lauki chana dal, fiber-heavy and filling.";
+        return "Recipe video shared. Detailed transcript summary needs backend video processing.";
+      }
+
+      function addChat(sender, type, text, extra = {}) {
+        state.chats.push({ id: Date.now() + Math.random(), sender, type, text, ...extra });
+        persist();
+        renderChat();
+      }
+
+      function sendChat(role) {
+        const input = byId(role === "owner" ? "ownerText" : "helperText");
+        const text = input.value.trim();
+        if (!text) return;
+        if (/youtube\.com|youtu\.be/i.test(text)) {
+          shareYoutube(role, text);
+        } else {
+          addChat(role, "text", text);
+        }
+        input.value = "";
+      }
+
+      function shareMedia(role, kind) {
+        addChat(role, kind, `${kind} shared in family chat`);
+      }
+
+      function shareYoutube(role, textArg) {
+        const input = byId(role === "owner" ? "ownerText" : "helperText");
+        const url = (textArg || input.value || "https://www.youtube.com/results?search_query=healthy+hindi+recipe").trim();
+        const gi = estimateGi(url);
+        addChat(role, "youtube", url, { gist: gistForYoutube(url), gi: gi.score, giLabel: gi.label });
+        input.value = "";
+      }
+
+      function renderChatPane(role, targetId) {
+        const pane = byId(targetId);
+        pane.innerHTML = state.chats.slice(-18).map((m) => {
+          const cls = ["msg", m.sender === role ? "mine" : "", m.sender === "ai" ? "ai" : ""].join(" ").trim();
+          const s = m.sender === "owner" ? "Owner" : m.sender === "helper" ? "Helper" : "AI";
+          const gi = m.gi ? `<div class="meta">GI Estimate: ${m.giLabel} (${m.gi})</div>` : "";
+          const gist = m.gist ? `<div class="meta">${m.gist}</div>` : "";
+          return `<div class="${cls}"><div class="meta">${s} · ${m.type}</div><div>${escapeHtml(m.text)}</div>${gist}${gi}</div>`;
+        }).join("");
+        pane.scrollTop = pane.scrollHeight;
+      }
+
+      function renderChat() {
+        renderChatPane("owner", "ownerChat");
+        renderChatPane("helper", "helperChat");
+      }
+
+      function renderRequests() {
+        const list = byId("requestList");
+        if (!state.requests.length) {
+          list.innerHTML = '<p class="muted">No grocery requests yet.</p>';
+          return;
+        }
+        list.innerHTML = state.requests.map((r) =>
+          `<div class="card"><div>${escapeHtml(r.items.join(", "))}</div><button data-action="toggle-request" data-id="${r.id}">${r.done ? "Undo" : "Done"}</button></div>`
+        ).join("");
+      }
+
+      function sendOrder() {
+        const text = byId("orderText").value.trim();
+        const items = parseItems(text);
+        if (!items.length) return alert("Add at least one item.");
+        state.requests.unshift({ id: Date.now(), items, done: false });
+        byId("orderText").value = "";
+        persist();
+        renderRequests();
+        alert("Request sent to owner.");
+      }
+
+      function toggleRequest(id) {
+        const r = state.requests.find((x) => String(x.id) === String(id));
+        if (!r) return;
+        r.done = !r.done;
+        persist();
+        renderRequests();
+      }
+
+      function suggestRecipes() {
+        const inv = byId("inventory").value.toLowerCase();
+        byId("recipes").innerHTML = RECIPES.map((r) => {
+          const ready = r.need.some((k) => inv.includes(k.toLowerCase()));
+          return `<div class="card">
+            <h3>${r.title}</h3>
+            <p class="muted">Estimated GI: ${giLabel(r.gi)} (${r.gi})</p>
+            <ol>${r.steps.map((s) => `<li>${s}</li>`).join("")}</ol>
+            <div class="row">
+              <button data-action="open-yt" data-query="${encodeURIComponent(r.q)}">Hindi YouTube</button>
+              ${ready ? '<span class="badge">Ready from fridge</span>' : '<span class="badge">Need groceries</span>'}
+            </div>
+          </div>`;
+        }).join("");
+      }
+
+      function setAiStatus(msg, tone) {
+        const el = byId("aiConnStatus");
+        el.textContent = msg;
+        el.className = `status ${tone || "muted"}`;
+      }
+
+      function renderAiConfig() {
+        byId("openRouterKey").value = state.aiConfig.apiKey || "";
+        byId("openRouterModel").value = state.aiConfig.model || "deepseek/deepseek-chat-v3-0324:free";
+        byId("aiConnBadge").textContent = state.aiConfig.apiKey ? "OpenRouter connected" : "Offline fallback";
+        byId("huaweiBadge").textContent = state.huaweiLinked ? "Huawei linked" : "Manual";
+      }
+
+      function saveAiConfig() {
+        state.aiConfig.apiKey = byId("openRouterKey").value.trim();
+        state.aiConfig.model = byId("openRouterModel").value.trim() || "deepseek/deepseek-chat-v3-0324:free";
+        persist();
+        renderAiConfig();
+        setAiStatus("Saved AI configuration.", state.aiConfig.apiKey ? "ok" : "warn");
+      }
+
+      async function askOpenRouter(messages) {
+        if (!state.aiConfig.apiKey) throw new Error("No API key");
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${state.aiConfig.apiKey}` },
+          body: JSON.stringify({ model: state.aiConfig.model, messages, temperature: 0.3, max_tokens: 280 }),
+        });
+        if (!res.ok) throw new Error("OpenRouter request failed");
+        const data = await res.json();
+        return data?.choices?.[0]?.message?.content?.trim() || "";
+      }
+
+      function fallbackAi(role, q) {
+        const t = q.toLowerCase();
+        if (role === "helper" && /(hba1c|hb|weight|वजन|bp|vitals)/i.test(t)) {
+          return "I cannot share owner private health details. I can help with recipes and groceries.";
+        }
+        if (/youtube|video/.test(t)) return "Share YouTube link in Family Chat; app will add gist and GI estimate.";
+        if (/summar|सारांश/.test(t)) return "Recent chat summary: cooking updates, grocery asks, and no private vitals shown.";
+        return "I can help with meal ideas, GI-aware choices, fridge-based recipes, and grocery planning.";
+      }
+
+      async function askAi(role) {
+        const qEl = byId(role === "owner" ? "ownerAiQ" : "helperAiQ");
+        const aEl = byId(role === "owner" ? "ownerAiA" : "helperAiA");
+        const q = qEl.value.trim();
+        if (!q) return;
+        let answer = "";
+        try {
+          answer = await askOpenRouter([
+            { role: "system", content: role === "helper" ? "Do not reveal owner private details." : "Owner nutrition assistant." },
+            { role: "user", content: q },
+          ]);
+        } catch (e) {
+          answer = fallbackAi(role, q);
+        }
+        aEl.textContent = answer || fallbackAi(role, q);
+        qEl.value = "";
+      }
+
+      async function summarize(role) {
+        const recent = state.chats.slice(-10).map((m) => `${m.sender}/${m.type}: ${m.text}`).join("\n");
+        try {
+          const summary = await askOpenRouter([
+            { role: "system", content: "Summarize in 3 short lines. Do not include private vitals." },
+            { role: "user", content: recent || "No messages" },
+          ]);
+          addChat("ai", "summary", summary || "No summary generated.");
+        } catch (e) {
+          addChat("ai", "summary", "Chat summary: recent recipe/grocery discussion; no private vitals shared.");
+        }
+      }
+
+      function escapeHtml(s) {
+        return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+      }
+
+      function renderAll() {
+        renderRequests();
+        renderChat();
+        renderAiConfig();
+        suggestRecipes();
+      }
+
+      document.addEventListener("click", (e) => {
+        const t = e.target.closest("[data-action]");
+        if (!t) return;
+        const a = t.dataset.action;
+        if (a === "login-owner") login("owner");
+        else if (a === "login-helper") login("helper");
+        else if (a === "logout") logout();
+        else if (a === "toggle-huawei") { state.huaweiLinked = !state.huaweiLinked; persist(); renderAiConfig(); }
+        else if (a === "save-ai") saveAiConfig();
+        else if (a === "send-owner") sendChat("owner");
+        else if (a === "send-helper") sendChat("helper");
+        else if (a === "yt-owner") shareYoutube("owner");
+        else if (a === "yt-helper") shareYoutube("helper");
+        else if (a === "media-owner") shareMedia("owner", t.dataset.kind || "file");
+        else if (a === "media-helper") shareMedia("helper", t.dataset.kind || "file");
+        else if (a === "sum-owner") summarize("owner");
+        else if (a === "sum-helper") summarize("helper");
+        else if (a === "ask-owner-ai") askAi("owner");
+        else if (a === "ask-helper-ai") askAi("helper");
+        else if (a === "send-order") sendOrder();
+        else if (a === "suggest-recipes") suggestRecipes();
+        else if (a === "toggle-request") toggleRequest(t.dataset.id);
+        else if (a === "open-yt") window.open(`https://www.youtube.com/results?search_query=${t.dataset.query}`, "_blank");
+      });
+
+      ["ownerText", "helperText", "ownerAiQ", "helperAiQ"].forEach((id) => {
+        const el = byId(id);
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            if (id === "ownerText") sendChat("owner");
+            else if (id === "helperText") sendChat("helper");
+            else if (id === "ownerAiQ") askAi("owner");
+            else askAi("helper");
+          }
+        });
+      });
+
+      renderAll();
+    </script>
+  </body>
+</html>
